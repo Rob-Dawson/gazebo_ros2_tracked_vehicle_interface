@@ -85,6 +85,7 @@ namespace gazebo
 
     void GazeboRosTrackedVehicleInterface::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf )
     {
+
         this->m_parent = _parent;
         ros_node = gazebo_ros::Node::Get(_sdf);
 
@@ -126,19 +127,23 @@ namespace gazebo
         } else {
             this->publish_tf_ = _sdf->GetElement("publishTf")->Get<bool>();
         }
-        // if ( this->update_rate > 0.0 ) this->update_period = 1.0 / this->update_rate;
-        // else this->update_period = 0.0;
-        // last_update_time = m_parent->GetWorld()->SimTime();
+        if ( this->update_rate > 0.0 ) this->update_period = 1.0 / this->update_rate;
+        else this->update_period = 0.0;
+        last_update_time = m_parent->GetWorld()->SimTime();
 
-        // // Initialize velocity stuff
-        // track_speed[RIGHT] = 0;
-        // track_speed[LEFT] = 0;
+        // Initialize velocity stuff
+        track_speed[RIGHT] = 0;
+        track_speed[LEFT] = 0;
 
-        // alive_ = true;
+        alive_ = true;
 
         // /* SETUP OF ROS AND IGNITION PUB SUBS & CO */
-
-        // transformBroadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(this); //Change to use shared_from_this
+        transformBroadcaster = std::make_shared<tf2_ros::StaticTransformBroadcaster>(ros_node);
+        RCLCPP_INFO(ros_node->get_logger(), "Broadcasting static transform");
+        transform_stamped.header.frame_id = "left_flipper_link";
+        transformBroadcaster->sendTransform(transform_stamped);
+        //sharedIntPointer = std::make_shared<int>(42);
+        // transformBroadcaster = std::make_shared<tf2_ros::StaticTransformBroadcaster>(shared_from_this()); //Change to use shared_from_this
         // RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "tracked_vehicle_interface '%s': Try to subscribe to '%s'" << command_ros_topic_.c_str());
 
 

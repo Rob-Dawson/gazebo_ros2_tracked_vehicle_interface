@@ -5,8 +5,12 @@
 #include <rclcpp/rclcpp.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
+#include <tf2_ros/static_transform_broadcaster.h>
+
 
 //Gazebo Includes
 #include <gazebo/gazebo.hh>
@@ -26,10 +30,11 @@
 
 #include <ignition/math/Vector3.hh>
 
+#include <memory.h>
 
 namespace gazebo
 {
-    class GazeboRosTrackedVehicleInterface : public ModelPlugin
+    class GazeboRosTrackedVehicleInterface : public ModelPlugin, public std::enable_shared_from_this<GazeboRosTrackedVehicleInterface> 
     {
 
         enum OdomSource
@@ -85,8 +90,10 @@ namespace gazebo
             rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom;
             rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_ros;
             
-            std::shared_ptr<tf2_ros::TransformBroadcaster> transformBroadcaster;
+            std::shared_ptr<tf2_ros::StaticTransformBroadcaster> transformBroadcaster = nullptr;
 
+
+            std::shared_ptr<int> sharedIntPointer = nullptr; 
 
             
             // ignition transport
@@ -107,6 +114,7 @@ namespace gazebo
             msgs::Twist cmd_vel;
             double track_speed[2];
 
+            geometry_msgs::msg::TransformStamped transform_stamped;
     };
     GZ_REGISTER_MODEL_PLUGIN(GazeboRosTrackedVehicleInterface);
 
