@@ -1,3 +1,6 @@
+// Tidle ~ is no longer supported in ROS2 and thus has been changed
+
+
 #include "gazebo_ros_tracked_vehicle_interface.hpp"
 
 namespace gazebo
@@ -138,13 +141,21 @@ namespace gazebo
         alive_ = true;
 
         // /* SETUP OF ROS AND IGNITION PUB SUBS & CO */
-        transformBroadcaster = std::make_shared<tf2_ros::StaticTransformBroadcaster>(ros_node);
+        transformBroadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(ros_node);
         RCLCPP_INFO(ros_node->get_logger(), "Broadcasting static transform");
         transform_stamped.header.frame_id = "left_flipper_link";
         transformBroadcaster->sendTransform(transform_stamped);
-        //sharedIntPointer = std::make_shared<int>(42);
-        // transformBroadcaster = std::make_shared<tf2_ros::StaticTransformBroadcaster>(shared_from_this()); //Change to use shared_from_this
-        // RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "tracked_vehicle_interface '%s': Try to subscribe to '%s'" << command_ros_topic_.c_str());
+
+
+
+
+        if(this->publish_tf_)
+        {
+            RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), odometry_topic_);
+
+            odom = ros_node->create_publisher<nav_msgs::msg::Odometry>(odometry_topic_, 10);
+            RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), odometry_topic_);
+        }
 
 
         // ROS PUB SUB & CO
