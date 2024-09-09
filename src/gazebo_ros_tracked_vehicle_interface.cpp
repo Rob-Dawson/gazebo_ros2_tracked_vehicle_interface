@@ -92,12 +92,12 @@ namespace gazebo
         this->m_parent = _parent;
         ros_node = gazebo_ros::Node::Get(_sdf);
 
-        command_ros_topic_ =    params<std::string>(_sdf, "commandROSTopic", "asdasdasd");
-        command_ign_topic_ =    params<std::string>(_sdf, "commandIGNTopic", "default");
-        odometry_topic_ =       params<std::string>(_sdf, "odometryTopic", "default");
-        odometry_frame_=        params<std::string>(_sdf, "odometryFrame", "default" );
-        robot_base_frame_ =     params<std::string>(_sdf, "robotBaseFrame", "default" );
-        track_speed_topic_ =    params<std::string>(_sdf, "trackSpeedTopic", "default");
+        command_ros_topic_ =    params<std::string>(_sdf, "commandROSTopic", "cmd_vel_ros");
+        command_ign_topic_ =    params<std::string>(_sdf, "commandIGNTopic", "cmd_vel_ign");
+        odometry_topic_ =       params<std::string>(_sdf, "odometryTopic", "odom");
+        odometry_frame_=        params<std::string>(_sdf, "odometryFrame", "odom" );
+        robot_base_frame_ =     params<std::string>(_sdf, "robotBaseFrame", "base_footprint" );
+        track_speed_topic_ =    params<std::string>(_sdf, "trackSpeedTopic", "track_speed");
 
         this->m_ignition_node.reset(new transport::Node());
         this->m_ignition_node->Init(_parent->GetWorld()->Name());
