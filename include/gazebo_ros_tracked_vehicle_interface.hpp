@@ -55,12 +55,16 @@ namespace gazebo
             template<typename Type>
             Type params(const sdf::ElementPtr &_sdf, const std::string &paramName, const std::map<std::string, Type> &options, const Type &defaultValue);
 
+
             // std::string params(const sdf::ElementPtr &_sdf, const std::string &topicName, const std::string &defaultName);
             // bool params(const sdf::ElementPtr &_sdf, const std::string &topicName, const bool &defaultName);
             // double params(const sdf::ElementPtr &_sdf, const std::string &topicName, const double &defaultName);
 
             // void Reset();
         private:
+
+        void cmdVelCallback(const geometry_msgs::msg::Twist::ConstPtr &msg);
+
             gazebo_ros::Node::SharedPtr ros_node;
             rclcpp::Node::SharedPtr node;
             transport::NodePtr m_ignition_node;

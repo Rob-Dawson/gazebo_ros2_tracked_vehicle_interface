@@ -142,10 +142,14 @@ namespace gazebo
 
         // /* SETUP OF ROS AND IGNITION PUB SUBS & CO */
         transformBroadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(ros_node);
-        RCLCPP_INFO(ros_node->get_logger(), "Broadcasting static transform");
-        transform_stamped.header.frame_id = "left_flipper_link";
-        transformBroadcaster->sendTransform(transform_stamped);
+        // RCLCPP_INFO(ros_node->get_logger(), "Broadcasting static transform");
+        // transform_stamped.header.frame_id = "left_flipper_link";
+        // transformBroadcaster->sendTransform(transform_stamped);
 
+                ros::SubscribeOptions so =
+            ros::SubscribeOptions::create<geometry_msgs::Twist>(command_ros_topic_, 1,
+                    boost::bind(&GazeboRosTrackedVehicleInterface::cmdVelCallback, this, _1),
+                    ros::VoidPtr(), &queue_);
 
 
 
@@ -191,4 +195,19 @@ namespace gazebo
         }
         RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "Hello EVERYONE FROM ROS2!");
     }
+
+    void GazeboRosTrackedVehicleInterface::cmdVelCallback(const geometry_msgs::msg::Twist::ConstPtr &msg)
+    {
+        cmd_vel.mutable_linear()->set_x(msg->linear.x);
+        cmd_vel.mutable_linear()->set_y(msg->linear.y);
+        // this->cmd_vel_publisher_ign_->Publish(cmd_vel_publisher_ign);
+
+    }
+
+    // void GazeboRosTrackedVehicleInterface::cmdVelCallback(const geometry_msgs::Twist::ConstPtr &_msg) {
+    //     cmd_vel_.mutable_linear()->set_x(_msg->linear.x);
+    //     cmd_vel_.mutable_angular()->set_z(-_msg->angular.z);
+
+    //     this->cmd_vel_publisher_ign_->Publish(cmd_vel_);
+    // }
 }
