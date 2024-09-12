@@ -49,6 +49,9 @@ namespace gazebo
             // ~GazeboRosTrackedVehicleInterface();
             void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);
 
+            //Runs at every simulation interval. Tick
+            void OnUpdate(const gazebo::common::UpdateInfo & _info);
+
             template<typename Type>
             Type params(const sdf::ElementPtr &_sdf, const std::string &paramName, const Type &defaultValue);
             
@@ -63,7 +66,7 @@ namespace gazebo
             // void Reset();
         private:
 
-        void cmdVelCallback(const geometry_msgs::msg::Twist::ConstPtr &msg);
+        void cmdVelCallback(const geometry_msgs::msg::Twist::SharedPtr &msg);
 
             gazebo_ros::Node::SharedPtr ros_node;
             rclcpp::Node::SharedPtr node;
@@ -94,11 +97,10 @@ namespace gazebo
             rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom;
             rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_ros;
             
-            std::shared_ptr<tf2_ros::StaticTransformBroadcaster> transformBroadcaster = nullptr;
+            std::shared_ptr<tf2_ros::TransformBroadcaster> transformBroadcaster = nullptr;
 
 
             std::shared_ptr<int> sharedIntPointer = nullptr; 
-
             
             // ignition transport
             transport::PublisherPtr cmd_vel_publisher_ign;

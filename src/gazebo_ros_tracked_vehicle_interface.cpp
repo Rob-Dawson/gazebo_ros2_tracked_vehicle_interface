@@ -2,11 +2,11 @@
 
 
 #include "gazebo_ros_tracked_vehicle_interface.hpp"
-
+using std::placeholders::_1;
 namespace gazebo
 {
 
-        // used as index number
+        // Tracks
     enum {
         RIGHT,
         LEFT,
@@ -146,13 +146,15 @@ namespace gazebo
         // transform_stamped.header.frame_id = "left_flipper_link";
         // transformBroadcaster->sendTransform(transform_stamped);
 
-                ros::SubscribeOptions so =
-            ros::SubscribeOptions::create<geometry_msgs::Twist>(command_ros_topic_, 1,
-                    boost::bind(&GazeboRosTrackedVehicleInterface::cmdVelCallback, this, _1),
-                    ros::VoidPtr(), &queue_);
+        // auto callback = std::bind(&GazeboRosTrackedVehicleInterface::cmdVelCallback, this, _1);
+        // auto subscription = ros_node->create_subscription<geometry_msgs::msg::Twist>(command_ros_topic_, 1, callback);
 
-
-
+        cmd_vel_ros = ros_node->create_subscription<geometry_msgs::msg::Twist>(
+            command_ros_topic_, 10,
+            [this](const geometry_msgs::msg::Twist::SharedPtr msg) {
+                this->cmdVelCallback(msg);
+    }
+);
         if(this->publish_tf_)
         {
             RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), odometry_topic_);
@@ -194,14 +196,18 @@ namespace gazebo
             return;
         }
         RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "Hello EVERYONE FROM ROS2!");
-    }
 
-    void GazeboRosTrackedVehicleInterface::cmdVelCallback(const geometry_msgs::msg::Twist::ConstPtr &msg)
+        this->update_connection = gazebo::event::Events::ConnectWorldUpdateBegin(
+            [this](const gazebo::common::UpdateInfo& info) {
+                this->OnUpdate(info);
+            });
+            }
+
+    void GazeboRosTrackedVehicleInterface::cmdVelCallback(const geometry_msgs::msg::Twist::SharedPtr &msg)
     {
         cmd_vel.mutable_linear()->set_x(msg->linear.x);
         cmd_vel.mutable_linear()->set_y(msg->linear.y);
-        // this->cmd_vel_publisher_ign_->Publish(cmd_vel_publisher_ign);
-
+        this->cmd_vel_publisher_ign->Publish(cmd_vel);
     }
 
     // void GazeboRosTrackedVehicleInterface::cmdVelCallback(const geometry_msgs::Twist::ConstPtr &_msg) {
@@ -210,4 +216,9 @@ namespace gazebo
 
     //     this->cmd_vel_publisher_ign_->Publish(cmd_vel_);
     // }
+
+    void GazeboRosTrackedVehicleInterface::OnUpdate(const gazebo::common::UpdateInfo &info)
+    {
+        RCLCPP_INFO_STREAM(rclcpp::get_logger("ros_node"), "Hello Bitches" << info.realTime.GetWallTime());
+    }
 }
