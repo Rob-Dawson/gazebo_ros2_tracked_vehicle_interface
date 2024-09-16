@@ -67,7 +67,7 @@ namespace gazebo
         private:
 
         void cmdVelCallback(const geometry_msgs::msg::Twist::SharedPtr &msg);
-
+        void OnTrackVelMsg(ConstVector2dPtr &msg);
             gazebo_ros::Node::SharedPtr ros_node;
             rclcpp::Node::SharedPtr node;
             transport::NodePtr m_ignition_node;
