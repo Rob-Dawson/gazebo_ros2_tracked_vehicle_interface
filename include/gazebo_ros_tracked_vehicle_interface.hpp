@@ -92,7 +92,7 @@ namespace gazebo
             bool alive_;
 
             //ROS 2 Publisher
-            rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom;
+            rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_publisher;
             rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_ros;
             
             std::shared_ptr<tf2_ros::TransformBroadcaster> transformBroadcaster = nullptr;
@@ -116,7 +116,7 @@ namespace gazebo
 
 
             OdomSource odom_source;
-
+            nav_msgs::msg::Odometry odom;
             // void onTrackVelMSg (ConstVector2dPtr &msg);
             // void cmdVellCallback(const geometry_msgs::msg::TwistStamped &msg);
 
