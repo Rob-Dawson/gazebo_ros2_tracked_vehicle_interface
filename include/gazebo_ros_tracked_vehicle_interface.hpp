@@ -52,16 +52,14 @@ namespace gazebo
             //Runs at every simulation interval. Tick
             void OnUpdate(const gazebo::common::UpdateInfo & _info);
 
+            void publishOdom(double step_time);
+
+
             template<typename Type>
             Type params(const sdf::ElementPtr &_sdf, const std::string &paramName, const Type &defaultValue);
             
             template<typename Type>
             Type params(const sdf::ElementPtr &_sdf, const std::string &paramName, const std::map<std::string, Type> &options, const Type &defaultValue);
-
-
-            // std::string params(const sdf::ElementPtr &_sdf, const std::string &topicName, const std::string &defaultName);
-            // bool params(const sdf::ElementPtr &_sdf, const std::string &topicName, const bool &defaultName);
-            // double params(const sdf::ElementPtr &_sdf, const std::string &topicName, const double &defaultName);
 
             // void Reset();
         private:
@@ -108,8 +106,14 @@ namespace gazebo
             event::ConnectionPtr update_connection;
             double update_rate;
             double update_period;
+            double seconds_since_last_update;
+
             //Maybe use chrono????
             common::Time last_update_time;
+            common::Time current_time_gazebo;
+            rclcpp::Time current_time_ros;
+
+
 
             OdomSource odom_source;
 
@@ -121,6 +125,7 @@ namespace gazebo
             double track_speed[2];
 
             geometry_msgs::msg::TransformStamped transform_stamped;
+
     };
     GZ_REGISTER_MODEL_PLUGIN(GazeboRosTrackedVehicleInterface);
 
