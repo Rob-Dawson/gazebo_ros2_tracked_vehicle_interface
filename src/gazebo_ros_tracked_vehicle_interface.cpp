@@ -1,6 +1,7 @@
 // Tidle ~ is no longer supported in ROS2 and thus has been changed
 
 #include "gazebo_ros_tracked_vehicle_interface.hpp"
+
 using std::placeholders::_1;
 namespace gazebo
 {
@@ -70,7 +71,7 @@ namespace gazebo
         odometry_topic_ = params<std::string>(_sdf, "odometryTopic", "odom");
         odometry_frame_ = params<std::string>(_sdf, "odometryFrame", "odom");
         robot_base_frame_ = params<std::string>(_sdf, "robotBaseFrame", "base_footprint");
-        track_speed_topic_ = params<std::string>(_sdf, "trackSpeedTopic", "track_speed");
+        track_speed_topic_ = params<std::string>(_sdf, "trackSpeedTopic", "tracks_speed");
 
         this->m_ignition_node.reset(new transport::Node());
         this->m_ignition_node->Init(_parent->GetWorld()->Name());
@@ -119,9 +120,6 @@ namespace gazebo
 
         // /* SETUP OF ROS AND IGNITION PUB SUBS & CO */
         transformBroadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(ros_node);
-        // RCLCPP_INFO(ros_node->get_logger(), "Broadcasting static transform");
-        // transform_stamped.header.frame_id = "left_flipper_link";
-        // transformBroadcaster->sendTransform(transform_stamped);
 
         // auto callback = std::bind(&GazeboRosTrackedVehicleInterface::cmdVelCallback, this, _1);
         // auto subscription = ros_node->create_subscription<geometry_msgs::msg::Twist>(command_ros_topic_, 1, callback);
@@ -139,12 +137,15 @@ namespace gazebo
             odom = ros_node->create_publisher<nav_msgs::msg::Odometry>(odometry_topic_, 10);
             RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), odometry_topic_);
         }
-
+ // listen to the update event (broadcast every simulation iteration)
         this->update_connection = gazebo::event::Events::ConnectWorldUpdateBegin(
             [this](const gazebo::common::UpdateInfo &info)
             {
                 this->OnUpdate(info);
             });
+
+        this->tracks_vel_subscriber_ign = this->m_ignition_node->Subscribe<msgs::Vector2d, GazeboRosTrackedVehicleInterface>(track_speed_topic_, &GazeboRosTrackedVehicleInterface::OnTrackVelMsg, this);
+
 
         // tracks_vel_subscriber_ign = ros_node->create_subscription<msgs::Vector2d, GazeboRosTrackedVehicleInterface>(track_speed_topic_, &GazeboRosTrackedVehicleInterface::OnTrackVelMsg, this);
 // ROS 2 Subscriber
@@ -189,23 +190,36 @@ namespace gazebo
     {
         cmd_vel.mutable_linear()->set_x(msg->linear.x);
         cmd_vel.mutable_angular()->set_z(msg->angular.z);
+                RCLCPP_INFO_STREAM(rclcpp::get_logger("tracked_interface"), "Inside");
+
         this->cmd_vel_publisher_ign->Publish(cmd_vel);
     }
 
-    // void GazeboRosTrackedVehicleInterface::cmdVelCallback(const geometry_msgs::Twist::ConstPtr &_msg) {
-    //     cmd_vel_.mutable_linear()->set_x(_msg->linear.x);
-    //     cmd_vel_.mutable_angular()->set_z(-_msg->angular.z);
-
-    //     this->cmd_vel_publisher_ign_->Publish(cmd_vel_);
-    // }
-
     void GazeboRosTrackedVehicleInterface::OnUpdate(const gazebo::common::UpdateInfo &info)
     {
-        // RCLCPP_INFO_STREAM(rclcpp::get_logger("ros_node"), "Hello Bitches" << info.realTime.GetWallTime());
+        current_time_gazebo = m_parent->GetWorld()->SimTime();
+        seconds_since_last_update = (current_time_gazebo - last_update_time).Double();
+        if(seconds_since_last_update > update_period)
+        {
+            if(this->publish_tf_)
+            {
+                publishOdom(seconds_since_last_update);
+            }
+            last_update_time+= common::Time(update_period);
+        }
     }
 
     void GazeboRosTrackedVehicleInterface::OnTrackVelMsg(ConstVector2dPtr &msg)
     {
-
+        track_speed[LEFT] = msg->x();
+        track_speed[RIGHT] = msg->y();
+        RCLCPP_INFO_STREAM(rclcpp::get_logger("tracked_interface"), "TRACK_SPEED: " << msg->y());
     }
+
+    void GazeboRosTrackedVehicleInterface::publishOdom(double time_step)
+    {
+        current_time_ros = ros_node->now();
+        RCLCPP_INFO_STREAM(rclcpp::get_logger("tracked_interface"), "Time is: " << current_time_ros.seconds());
+    }
+
 }
