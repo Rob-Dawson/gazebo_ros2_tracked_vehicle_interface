@@ -134,7 +134,7 @@ namespace gazebo
         {
             RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), odometry_topic_);
 
-            odom = ros_node->create_publisher<nav_msgs::msg::Odometry>(odometry_topic_, 10);
+            odom_publisher = ros_node->create_publisher<nav_msgs::msg::Odometry>(odometry_topic_, 10);
             RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), odometry_topic_);
         }
  // listen to the update event (broadcast every simulation iteration)
@@ -220,6 +220,27 @@ namespace gazebo
     {
         current_time_ros = ros_node->now();
         RCLCPP_INFO_STREAM(rclcpp::get_logger("tracked_interface"), "Time is: " << current_time_ros.seconds());
+
+        tf2::Quaternion qt;
+        tf2::Vector3 vt;
+        // std::string odom_frame = ros_node->tf
+
+
+        ignition::math::Pose3d pose = m_parent->WorldPose();
+        // RCLCPP_INFO_STREAM(rclcpp::get_logger("tracked_interface"), pose);
+
+        qt = tf2::Quaternion(pose.Rot().X(), pose.Rot().Y(), pose.Rot().Z(), pose.Rot().W());
+        vt = tf2::Vector3(pose.Pos().X(), pose.Pos().Y(), pose.Pos().Z());
+
+        odom.pose.pose.position.x = vt.x();
+        odom.pose.pose.position.y = vt.y();
+        odom.pose.pose.position.z = vt.z();
+
+        odom.pose.pose.orientation.x = qt.x();
+        odom.pose.pose.orientation.y = qt.y();
+        odom.pose.pose.orientation.z = qt.z();
+        odom.pose.pose.orientation.w = qt.w();
+
     }
 
 }
