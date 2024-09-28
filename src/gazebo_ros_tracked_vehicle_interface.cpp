@@ -223,8 +223,11 @@ namespace gazebo
 
         tf2::Quaternion qt;
         tf2::Vector3 vt;
-        // std::string odom_frame = ros_node->tf
+        // std::string odom_frame = "ros_node->tf";
+        // std::string base_footprint_frame = "gazebo_ros_->resolveTF ( robot_base_frame_ );";
 
+        std::string odom_frame = "tracked_robot_2/"+odometry_frame_;
+        std::string base_footprint_frame = "tracked_robot_2/"+robot_base_frame_;
 
         ignition::math::Pose3d pose = m_parent->WorldPose();
         // RCLCPP_INFO_STREAM(rclcpp::get_logger("tracked_interface"), pose);
@@ -241,6 +244,44 @@ namespace gazebo
         odom.pose.pose.orientation.z = qt.z();
         odom.pose.pose.orientation.w = qt.w();
 
+        ignition::math::Vector3d linear;
+        linear = m_parent->WorldLinearVel();
+        odom.twist.twist.angular.z = m_parent->WorldAngularVel().Z();
+
+        float yaw = pose.Rot().Yaw();
+        odom.twist.twist.linear.x = cosf(yaw) * linear.X() + sinf(yaw) * linear.X();
+        odom.twist.twist.linear.y = cosf(yaw) * linear.Y() + sinf(yaw) * linear.Y();
+
+        if(publishOdomTF_)
+        {
+            geometry_msgs::msg::TransformStamped transform_stamped;
+            transform_stamped.header.stamp = current_time_ros;
+            transform_stamped.header.frame_id = odom_frame;
+            transform_stamped.child_frame_id = base_footprint_frame;
+
+            transform_stamped.transform.translation.x = vt.getX();
+            transform_stamped.transform.translation.y = vt.getY();
+            transform_stamped.transform.translation.z = vt.getZ();
+
+            transform_stamped.transform.rotation.x = qt.x();
+            transform_stamped.transform.rotation.y = qt.y();
+            transform_stamped.transform.rotation.z = qt.z();
+            transform_stamped.transform.rotation.z = qt.w();
+
+            transformBroadcaster->sendTransform(transform_stamped);
+
+        }
+        odom.pose.covariance[0] = 0.00001;
+        odom.pose.covariance[7] = 0.00001;
+        odom.pose.covariance[14] = 1000000000000.0;
+        odom.pose.covariance[21] = 1000000000000.0;
+        odom.pose.covariance[28] = 1000000000000.0;
+        odom.pose.covariance[35] = 0.001;
+
+        odom.header.stamp = current_time_ros;
+        odom.header.frame_id = odom_frame;
+        odom.child_frame_id = base_footprint_frame;
+        odom_publisher->publish(odom);
     }
 
 }
