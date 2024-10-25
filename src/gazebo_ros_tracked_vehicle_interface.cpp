@@ -96,7 +96,9 @@ namespace gazebo
         odomOptions["encoder"] = ENCODER;
         odomOptions["world"] = WORLD;
 
-        odom_source = params(_sdf, "odometrySource", odomOptions, WORLD);
+        odom_source = params(_sdf, "odometrySource", odomOptions, ENCODER);
+        RCLCPP_INFO_STREAM(rclcpp::get_logger("rclcpp"), "Odom Source " << odom_source);
+
         this->publish_tf_ = true;
         if (!_sdf->HasElement("publishTf"))
         {
@@ -197,8 +199,15 @@ namespace gazebo
 
     void GazeboRosTrackedVehicleInterface::OnUpdate(const gazebo::common::UpdateInfo &info)
     {
-        current_time_gazebo = m_parent->GetWorld()->SimTime();
-        seconds_since_last_update = (current_time_gazebo - last_update_time).Double();
+        if (odom_source == ENCODER)
+        {
+            // RCLCPP_FATAL(rclcpp::get_logger("rcl1cpp"), "Encoder");
+
+            UpdateOdometryEncoder();
+        }
+
+        common::Time current_time = m_parent->GetWorld()->SimTime();
+        seconds_since_last_update = (current_time - last_update_time).Double();
         if(seconds_since_last_update > update_period)
         {
             if(this->publish_tf_)
@@ -216,19 +225,80 @@ namespace gazebo
         RCLCPP_INFO_STREAM(rclcpp::get_logger("tracked_interface"), "TRACK_SPEED: " << msg->y());
     }
 
+    void GazeboRosTrackedVehicleInterface::UpdateOdometryEncoder()
+    {
+        double vl = track_speed[LEFT];
+        double vr = track_speed[RIGHT];
+
+        common::Time current_time = m_parent->GetWorld()->SimTime();
+        double seconds_since_last_update = (current_time - last_odom_update_).Double();
+        last_odom_update_ = current_time;
+        // RCLCPP_INFO_STREAM(rclcpp::get_logger("track_interface"), seconds_since_last_update);
+        // RCLCPP_INFO_STREAM(rclcpp::get_logger("track_interface"), current_time);
+
+        double b = track_separation_;
+        //SL = Displacement Left => Distance travelled Left
+        //SR = Displacement Right
+        //SSUM = Total Displacement = Total distance travelled
+        //SDIFF = Displacement Difference = How much the robot has rotated
+        //dx = Change in X position
+        //dy = Change in Y position
+        //dtheta = Change in angular rotation
+        double sl = vl*seconds_since_last_update;
+        double sr = vr * seconds_since_last_update;
+        double ssum= sl+sr;
+        double sdiff = sr-sl;
+        double dx = (ssum) / 2.0 * cos(pose_encoder_.theta + (sdiff)/(2.0*b));
+        double dy = (ssum) / 2.0 * sin (pose_encoder_.theta + (sdiff)/(2.0*b));
+        double dtheta = sdiff/b;
+
+        //Updating robots position
+        pose_encoder_.x += dx;
+        pose_encoder_.y += dy;
+        pose_encoder_.theta += dtheta;
+
+        double w = dtheta/seconds_since_last_update;
+        double v = sqrt(dx*dx+dy*dy)/seconds_since_last_update;
+        tf2::Quaternion qt;
+        tf2::Vector3 vt;
+        qt.setRPY(0,0,pose_encoder_.theta);
+        vt = tf2::Vector3(pose_encoder_.x, pose_encoder_.y,0);
+
+        odom.pose.pose.position.x = vt.x();
+        odom.pose.pose.position.y = vt.y();
+        odom.pose.pose.position.z = vt.z();
+
+        odom.pose.pose.orientation.x = qt.x();
+        odom.pose.pose.orientation.y = qt.y();
+        odom.pose.pose.orientation.z = qt.z();
+        odom.pose.pose.orientation.w = qt.w();
+
+        odom.twist.twist.linear.x=v;
+        odom.twist.twist.linear.y=0;
+        odom.twist.twist.angular.z=w;
+
+
+    }
+
     void GazeboRosTrackedVehicleInterface::publishOdom(double time_step)
     {
         current_time_ros = ros_node->now();
-        RCLCPP_INFO_STREAM(rclcpp::get_logger("tracked_interface"), "Time is: " << current_time_ros.seconds());
+        // RCLCPP_INFO_STREAM(rclcpp::get_logger("tracked_interface"), "Time is: " << current_time_ros.seconds());
 
         tf2::Quaternion qt;
         tf2::Vector3 vt;
-        // std::string odom_frame = "ros_node->tf";
-        // std::string base_footprint_frame = "gazebo_ros_->resolveTF ( robot_base_frame_ );";
 
         std::string odom_frame = "tracked_robot_2/"+odometry_frame_;
         std::string base_footprint_frame = "tracked_robot_2/"+robot_base_frame_;
 
+        if (odom_source == ENCODER)
+        {
+            // RCLCPP_INFO_STREAM(rclcpp::get_logger("tracked_interface"), "Encoder: " );
+            qt = tf2::Quaternion(odom.pose.pose.orientation.x, odom.pose.pose.orientation.y, odom.pose.pose.orientation.z, odom.pose.pose.orientation.w);
+            vt = tf2::Vector3(odom.pose.pose.position.x, odom.pose.pose.position.y, odom.pose.pose.position.z);
+        }
+        if(odom_source == WORLD)
+        {
         ignition::math::Pose3d pose = m_parent->WorldPose();
         // RCLCPP_INFO_STREAM(rclcpp::get_logger("tracked_interface"), pose);
 
@@ -251,6 +321,7 @@ namespace gazebo
         float yaw = pose.Rot().Yaw();
         odom.twist.twist.linear.x = cosf(yaw) * linear.X() + sinf(yaw) * linear.X();
         odom.twist.twist.linear.y = cosf(yaw) * linear.Y() + sinf(yaw) * linear.Y();
+        }
 
         if(publishOdomTF_)
         {
@@ -271,6 +342,8 @@ namespace gazebo
             transformBroadcaster->sendTransform(transform_stamped);
 
         }
+
+
         odom.pose.covariance[0] = 0.00001;
         odom.pose.covariance[7] = 0.00001;
         odom.pose.covariance[14] = 1000000000000.0;
