@@ -24,6 +24,9 @@
 #include "gazebo/msgs/MessageTypes.hh"
 #include "gazebo/msgs/twist.pb.h"
 
+#include <gazebo_ros/conversions/geometry_msgs.hpp>
+#include <geometry_msgs/msg/pose2_d.hpp>
+
 
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
@@ -53,7 +56,7 @@ namespace gazebo
             void OnUpdate(const gazebo::common::UpdateInfo & _info);
 
             void publishOdom(double step_time);
-
+            void UpdateOdometryEncoder();
 
             template<typename Type>
             Type params(const sdf::ElementPtr &_sdf, const std::string &paramName, const Type &defaultValue);
@@ -112,6 +115,7 @@ namespace gazebo
             common::Time last_update_time;
             common::Time current_time_gazebo;
             rclcpp::Time current_time_ros;
+            common::Time last_odom_update_;
 
 
 
@@ -120,7 +124,7 @@ namespace gazebo
             // void onTrackVelMSg (ConstVector2dPtr &msg);
             // void cmdVellCallback(const geometry_msgs::msg::TwistStamped &msg);
 
-            geometry_msgs::msg::Pose pose_encoder_;
+            geometry_msgs::msg::Pose2D pose_encoder_;
             msgs::Twist cmd_vel;
             double track_speed[2];
 
